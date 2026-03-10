@@ -42,12 +42,12 @@ class GistlyAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             child: Row(
               children: [
-                // Left Section - Logo
-                _buildLogo(context, responsive),
+                // Left Section - Logo (expanded to take up most space)
+                Expanded(
+                  child: _buildLogo(context, responsive),
+                ),
 
-                const Spacer(),
-
-                // Right Section - Actions
+                // Right Section - Actions (hugged to the right)
                 _buildActions(context, responsive),
               ],
             ),
@@ -66,13 +66,14 @@ class GistlyAppBar extends StatelessWidget implements PreferredSizeWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          vertical: responsive.sp(8),
+          vertical: responsive.sp(6),
           horizontal: responsive.sp(4),
         ),
         child: Image.asset(
           'assets/images/gistly logo.png',
-          height: responsive.sp(32),
+          height: responsive.sp(40),
           fit: BoxFit.contain,
+          alignment: Alignment.centerLeft,
         ),
       ),
     );
@@ -85,12 +86,12 @@ class GistlyAppBar extends StatelessWidget implements PreferredSizeWidget {
         // Add Post Icon
         _AddPostButton(responsive: responsive),
 
-        SizedBox(width: responsive.sp(12)),
+        SizedBox(width: responsive.sp(6)),
 
         // Search Widget
         _SearchWidget(responsive: responsive),
 
-        SizedBox(width: responsive.sp(12)),
+        SizedBox(width: responsive.sp(6)),
 
         // DM Icon
         _DMButton(
@@ -157,9 +158,9 @@ class _SearchWidget extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          height: responsive.sp(40),
+          height: responsive.sp(36),
           padding: EdgeInsets.symmetric(
-            horizontal: responsive.sp(16),
+            horizontal: responsive.sp(10),
           ),
           decoration: BoxDecoration(
             color: AppTheme.greySoft.withOpacity(0.7),
@@ -170,14 +171,14 @@ class _SearchWidget extends StatelessWidget {
             children: [
               Icon(
                 Icons.search,
-                size: responsive.sp(20),
+                size: responsive.sp(18),
                 color: AppTheme.greyMedium,
               ),
-              SizedBox(width: responsive.sp(8)),
+              SizedBox(width: responsive.sp(4)),
               Text(
                 'Search',
                 style: TextStyle(
-                  fontSize: responsive.sp(14),
+                  fontSize: responsive.sp(13),
                   color: AppTheme.greyMedium,
                   fontWeight: FontWeight.w500,
                 ),

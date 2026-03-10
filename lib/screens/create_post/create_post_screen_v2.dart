@@ -3,6 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:io';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../utils/responsive.dart';
 import '../../models/media_attachment.dart';
@@ -248,6 +251,21 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
       SnackBar(
         content: Text(message),
         backgroundColor: AppTheme.alertOrange,
+      ),
+    );
+  }
+
+  void _showLocationPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _LocationPickerSheet(
+        onLocationSelected: (location) {
+          setState(() {
+            _selectedLocation = location;
+          });
+        },
       ),
     );
   }
@@ -604,9 +622,7 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
                   icon: Icons.location_on,
                   label: _selectedLocation!,
                   iconColor: Colors.red,
-                  onTap: () {
-                    // TODO: Edit location
-                  },
+                  onTap: () => setState(() => _selectedLocation = null),
                 ),
             ],
           ),
@@ -680,12 +696,7 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
         icon: Icons.location_on,
         label: _selectedLocation ?? 'Add Location',
         color: Colors.red,
-        onTap: () {
-          // TODO: Location picker
-          setState(() {
-            _selectedLocation = 'Current Location';
-          });
-        },
+        onTap: _showLocationPicker,
       ),
       ActionSheetItem(
         icon: Icons.palette,
@@ -705,6 +716,541 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
     return ActionSheet(
       items: actionItems,
       height: _sheetHeight,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Location Picker Bottom Sheet
+// ---------------------------------------------------------------------------
+
+class _LocationPickerSheet extends StatefulWidget {
+  final ValueChanged<String> onLocationSelected;
+
+  const _LocationPickerSheet({required this.onLocationSelected});
+
+  @override
+  State<_LocationPickerSheet> createState() => _LocationPickerSheetState();
+}
+
+class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<String> _suggestions = [];
+  bool _isLoadingLocation = false;
+  bool _isSearching = false;
+
+  Future<void> _onSearchChanged(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _suggestions = []);
+      return;
+    }
+    setState(() => _isSearching = true);
+    try {
+      final locations = await locationFromAddress(query);
+      if (!mounted) return;
+      final List<String> results = [];
+      for (final loc in locations.take(5)) {
+        final placemarks = await placemarkFromCoordinates(
+          loc.latitude,
+          loc.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final parts = [
+            if (p.name != null && p.name!.isNotEmpty) p.name,
+            if (p.locality != null && p.locality!.isNotEmpty) p.locality,
+            if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty)
+              p.administrativeArea,
+            if (p.country != null && p.country!.isNotEmpty) p.country,
+          ];
+          results.add(parts.join(', '));
+        }
+      }
+      if (mounted) setState(() => _suggestions = results);
+    } catch (_) {
+      if (mounted) setState(() => _suggestions = []);
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showError('Location services are disabled.');
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showError('Location permission denied.');
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        _showError('Location permission permanently denied.');
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      if (!mounted) return;
+      String locationName = 'Current Location';
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final parts = [
+          if (p.name != null && p.name!.isNotEmpty) p.name,
+          if (p.locality != null && p.locality!.isNotEmpty) p.locality,
+          if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty)
+            p.administrativeArea,
+          if (p.country != null && p.country!.isNotEmpty) p.country,
+        ];
+        if (parts.isNotEmpty) locationName = parts.join(', ');
+      }
+      widget.onLocationSelected(locationName);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      _showError('Could not get current location.');
+    } finally {
+      if (mounted) setState(() => _isLoadingLocation = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.alertOrange,
+      ),
+    );
+  }
+
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const _MapPickerScreen()),
+    );
+    if (result != null && mounted) {
+      widget.onLocationSelected(result);
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final responsive = context.responsive;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75 + bottomInset,
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(responsive.sp(AppTheme.radiusLarge)),
+          topRight: Radius.circular(responsive.sp(AppTheme.radiusLarge)),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: responsive.sp(12)),
+              child: Container(
+                width: responsive.sp(40),
+                height: responsive.sp(4),
+                decoration: BoxDecoration(
+                  color: AppTheme.greyMedium.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+
+          // Title
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              responsive.sp(16),
+              responsive.sp(16),
+              responsive.sp(16),
+              responsive.sp(8),
+            ),
+            child: Text(
+              'Add Location',
+              style: TextStyle(
+                fontSize: responsive.sp(18),
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+          ),
+
+          // Search field
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: responsive.sp(16)),
+            child: TextField(
+              controller: _searchController,
+              autofocus: false,
+              decoration: InputDecoration(
+                hintText: 'Type a location name...',
+                prefixIcon: const Icon(Icons.search, color: AppTheme.greyMedium),
+                suffixIcon: _isSearching
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.greenPrimary,
+                          ),
+                        ),
+                      )
+                    : _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: AppTheme.greyMedium),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _suggestions = []);
+                            },
+                          )
+                        : null,
+                filled: true,
+                fillColor: AppTheme.greySoft.withOpacity(0.5),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: responsive.sp(12),
+                  vertical: responsive.sp(12),
+                ),
+              ),
+              onChanged: _onSearchChanged,
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  widget.onLocationSelected(value.trim());
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ),
+
+          SizedBox(height: responsive.sp(8)),
+
+          // Geocoded suggestions
+          if (_suggestions.isNotEmpty)
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _suggestions.length,
+                itemBuilder: (context, index) {
+                  return ListTile(
+                    leading: const Icon(Icons.place_outlined,
+                        color: AppTheme.greyMedium),
+                    title: Text(
+                      _suggestions[index],
+                      style: TextStyle(fontSize: responsive.sp(14)),
+                    ),
+                    onTap: () {
+                      widget.onLocationSelected(_suggestions[index]);
+                      Navigator.pop(context);
+                    },
+                  );
+                },
+              ),
+            ),
+
+          // Static options (shown when no suggestions)
+          if (_suggestions.isEmpty) ...[
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.greenPrimary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: _isLoadingLocation
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.greenPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.my_location,
+                        color: AppTheme.greenPrimary, size: 20),
+              ),
+              title: Text(
+                'Use current location',
+                style: TextStyle(
+                  fontSize: responsive.sp(14),
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              subtitle: Text(
+                'Automatically detect your location',
+                style: TextStyle(
+                  fontSize: responsive.sp(12),
+                  color: AppTheme.greyMedium,
+                ),
+              ),
+              onTap: _isLoadingLocation ? null : _useCurrentLocation,
+            ),
+            Divider(
+              indent: responsive.sp(16),
+              endIndent: responsive.sp(16),
+              color: AppTheme.greySoft,
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.map_outlined, color: Colors.blue, size: 20),
+              ),
+              title: Text(
+                'Choose on map',
+                style: TextStyle(
+                  fontSize: responsive.sp(14),
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              subtitle: Text(
+                'Drop a pin anywhere on the map',
+                style: TextStyle(
+                  fontSize: responsive.sp(12),
+                  color: AppTheme.greyMedium,
+                ),
+              ),
+              onTap: _openMapPicker,
+            ),
+          ],
+
+          SizedBox(height: responsive.sp(16) + bottomInset),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Map Picker Full-Screen
+// ---------------------------------------------------------------------------
+
+class _MapPickerScreen extends StatefulWidget {
+  const _MapPickerScreen();
+
+  @override
+  State<_MapPickerScreen> createState() => _MapPickerScreenState();
+}
+
+class _MapPickerScreenState extends State<_MapPickerScreen> {
+  LatLng _pickedLatLng = const LatLng(9.0820, 8.6753); // Centre of Nigeria
+  String _pickedAddress = 'Move the map to select a location';
+  bool _isResolving = false;
+
+  Future<void> _resolveAddress(LatLng latLng) async {
+    setState(() {
+      _isResolving = true;
+      _pickedLatLng = latLng;
+    });
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        latLng.latitude,
+        latLng.longitude,
+      );
+      if (!mounted) return;
+      if (placemarks.isNotEmpty) {
+        final p = placemarks.first;
+        final parts = [
+          if (p.name != null && p.name!.isNotEmpty) p.name,
+          if (p.locality != null && p.locality!.isNotEmpty) p.locality,
+          if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty)
+            p.administrativeArea,
+          if (p.country != null && p.country!.isNotEmpty) p.country,
+        ];
+        setState(() {
+          _pickedAddress = parts.isNotEmpty ? parts.join(', ') : 'Unknown location';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _pickedAddress =
+            '${_pickedLatLng.latitude.toStringAsFixed(5)}, ${_pickedLatLng.longitude.toStringAsFixed(5)}');
+      }
+    } finally {
+      if (mounted) setState(() => _isResolving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final responsive = context.responsive;
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        backgroundColor: AppTheme.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: AppTheme.textPrimary),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Pick Location',
+          style: TextStyle(
+            fontSize: responsive.sp(18),
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+      ),
+      body: Stack(
+        children: [
+          // Map
+          GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: _pickedLatLng,
+              zoom: 6,
+            ),
+            onCameraIdle: () => _resolveAddress(_pickedLatLng),
+            onCameraMove: (position) => _pickedLatLng = position.target,
+            myLocationButtonEnabled: true,
+            myLocationEnabled: true,
+            zoomControlsEnabled: false,
+          ),
+
+          // Fixed centre pin
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 36),
+              child: Icon(
+                Icons.location_pin,
+                size: 48,
+                color: AppTheme.greenPrimary,
+              ),
+            ),
+          ),
+
+          // Bottom confirmation card
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                responsive.sp(16),
+                responsive.sp(16),
+                responsive.sp(16),
+                responsive.sp(24) + MediaQuery.of(context).padding.bottom,
+              ),
+              decoration: BoxDecoration(
+                color: AppTheme.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(responsive.sp(AppTheme.radiusLarge)),
+                  topRight: Radius.circular(responsive.sp(AppTheme.radiusLarge)),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on,
+                          color: AppTheme.greenPrimary, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _isResolving
+                            ? Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppTheme.greenPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Resolving address...',
+                                    style: TextStyle(
+                                      fontSize: responsive.sp(13),
+                                      color: AppTheme.greyMedium,
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Text(
+                                _pickedAddress,
+                                style: TextStyle(
+                                  fontSize: responsive.sp(14),
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textPrimary,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: responsive.sp(16)),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isResolving
+                          ? null
+                          : () => Navigator.pop(context, _pickedAddress),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.greenPrimary,
+                        foregroundColor: AppTheme.white,
+                        elevation: 0,
+                        padding: EdgeInsets.symmetric(vertical: responsive.sp(14)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                        ),
+                      ),
+                      child: Text(
+                        'Confirm Location',
+                        style: TextStyle(
+                          fontSize: responsive.sp(15),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
