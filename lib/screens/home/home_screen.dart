@@ -166,13 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final post = _posts[index];
-                  return PostCard(
-                    post: post,
-                    onLike: () => _handleLike(post),
-                    onComment: () => _handleComment(post),
-                    onShare: () => _handleShare(post),
-                    onTranslate: () => _handleTranslate(post),
-                  );
+                  return PostCard(post: post);
                 },
                 childCount: _posts.length,
               ),

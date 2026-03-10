@@ -3,22 +3,98 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/post.dart';
 import '../../config/app_theme.dart';
 import '../../utils/responsive.dart';
+import '../../screens/post/post_detail_screen.dart';
+import 'share_bottom_sheet.dart';
+import 'translation_overlay.dart';
 
-class PostCard extends StatelessWidget {
+class PostCard extends StatefulWidget {
   final Post post;
-  final VoidCallback? onLike;
-  final VoidCallback? onComment;
-  final VoidCallback? onShare;
-  final VoidCallback? onTranslate;
 
   const PostCard({
     super.key,
     required this.post,
-    this.onLike,
-    this.onComment,
-    this.onShare,
-    this.onTranslate,
   });
+
+  @override
+  State<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<PostCard> {
+  late Post _post;
+  bool _isTranslated = false;
+  String? _translatedText;
+
+  @override
+  void initState() {
+    super.initState();
+    _post = widget.post;
+  }
+
+  void _handleLike() {
+    setState(() {
+      _post = _post.copyWith(
+        isLiked: !_post.isLiked,
+        likes: _post.isLiked ? _post.likes - 1 : _post.likes + 1,
+      );
+    });
+  }
+
+  void _handleComment() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PostDetailScreen(post: _post),
+      ),
+    );
+  }
+
+  void _handleShare() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => ShareBottomSheet(post: _post),
+    );
+  }
+
+  void _handleTranslate() {
+    setState(() {
+      if (_isTranslated) {
+        _isTranslated = false;
+        _translatedText = null;
+      } else {
+        // Simulate translation
+        _isTranslated = true;
+        _translatedText = 'Translated: ${_post.content}';
+      }
+    });
+
+    if (_isTranslated) {
+      _showTranslationOverlay();
+    }
+  }
+
+  void _showTranslationOverlay() {
+    showDialog(
+      context: context,
+      builder: (context) => TranslationOverlay(
+        originalText: _post.content,
+        translatedText: _translatedText!,
+        onClose: () {
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  void _openPostDetail() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PostDetailScreen(post: _post),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,32 +105,35 @@ class PostCard extends StatelessWidget {
         horizontal: responsive.horizontalPadding,
         vertical: AppTheme.spacing8,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          _buildHeader(context, responsive),
-          
-          // Priority Badge
-          if (post.isHighPriority) _buildPriorityBadge(responsive),
-          
-          // Content
-          _buildContent(context, responsive),
-          
-          // Media
-          if (post.mediaUrl != null) _buildMedia(context),
-          
-          // Location
-          if (post.location != null) _buildLocation(responsive),
-          
-          // Engagement Stats
-          _buildEngagementStats(context, responsive),
-          
-          const Divider(height: 1),
-          
-          // Action Buttons
-          _buildActionButtons(context, responsive),
-        ],
+      child: InkWell(
+        onTap: _openPostDetail,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            _buildHeader(context, responsive),
+            
+            // Priority Badge
+            if (_post.isHighPriority) _buildPriorityBadge(responsive),
+            
+            // Content
+            _buildContent(context, responsive),
+            
+            // Media
+            if (_post.mediaUrl != null) _buildMedia(context),
+            
+            // Location
+            if (_post.location != null) _buildLocation(responsive),
+            
+            // Engagement Stats
+            _buildEngagementStats(context, responsive),
+            
+            const Divider(height: 1),
+            
+            // Action Buttons
+            _buildActionButtons(context, responsive),
+          ],
+        ),
       ),
     );
   }
@@ -67,10 +146,10 @@ class PostCard extends StatelessWidget {
           CircleAvatar(
             radius: responsive.sp(20),
             backgroundColor: AppTheme.greySoft,
-            backgroundImage: post.userAvatar != null
-                ? CachedNetworkImageProvider(post.userAvatar!)
+            backgroundImage: _post.userAvatar != null
+                ? CachedNetworkImageProvider(_post.userAvatar!)
                 : null,
-            child: post.userAvatar == null
+            child: _post.userAvatar == null
                 ? Icon(Icons.person, size: responsive.sp(24))
                 : null,
           ),
@@ -81,7 +160,7 @@ class PostCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  post.userName,
+                  _post.userName,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontSize: responsive.sp(16),
                         fontWeight: FontWeight.w600,
@@ -90,7 +169,7 @@ class PostCard extends StatelessWidget {
                   maxLines: 1,
                 ),
                 Text(
-                  post.formattedDate,
+                  _post.formattedDate,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: responsive.sp(12),
                         color: AppTheme.textSecondary,
@@ -126,7 +205,7 @@ class PostCard extends StatelessWidget {
         vertical: responsive.sp(AppTheme.spacing4),
       ),
       decoration: BoxDecoration(
-        color: post.priority == PostPriority.emergency
+        color: _post.priority == PostPriority.emergency
             ? AppTheme.alertOrange
             : AppTheme.alertOrange.withOpacity(0.8),
         borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
@@ -141,7 +220,7 @@ class PostCard extends StatelessWidget {
           ),
           SizedBox(width: responsive.sp(4)),
           Text(
-            post.priorityLabel,
+            _post.priorityLabel,
             style: TextStyle(
               color: AppTheme.white,
               fontSize: responsive.sp(11),
@@ -163,18 +242,20 @@ class PostCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            post.content,
+            _isTranslated ? _translatedText! : _post.content,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: responsive.sp(14),
                   height: 1.5,
                 ),
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
           ),
-          if (post.tags.isNotEmpty) ...[
+          if (_post.tags.isNotEmpty) ...[
             SizedBox(height: responsive.sp(AppTheme.spacing8)),
             Wrap(
               spacing: responsive.sp(8),
               runSpacing: responsive.sp(4),
-              children: post.tags.map((tag) {
+              children: _post.tags.map((tag) {
                 return Text(
                   '#$tag',
                   style: TextStyle(
@@ -197,7 +278,7 @@ class PostCard extends StatelessWidget {
       child: Stack(
         children: [
           CachedNetworkImage(
-            imageUrl: post.thumbnailUrl ?? post.mediaUrl!,
+            imageUrl: _post.thumbnailUrl ?? _post.mediaUrl!,
             width: double.infinity,
             fit: BoxFit.cover,
             placeholder: (context, url) => Container(
@@ -209,7 +290,7 @@ class PostCard extends StatelessWidget {
               child: const Icon(Icons.error),
             ),
           ),
-          if (post.type == PostType.video || post.type == PostType.audio)
+          if (_post.type == PostType.video || _post.type == PostType.audio)
             Center(
               child: Container(
                 padding: const EdgeInsets.all(12),
@@ -218,13 +299,13 @@ class PostCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  post.type == PostType.video ? Icons.play_arrow : Icons.audiotrack,
+                  _post.type == PostType.video ? Icons.play_arrow : Icons.audiotrack,
                   color: Colors.white,
                   size: 40,
                 ),
               ),
             ),
-          if (post.mediaDuration != null)
+          if (_post.mediaDuration != null)
             Positioned(
               bottom: 8,
               right: 8,
@@ -235,7 +316,7 @@ class PostCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  _formatDuration(post.mediaDuration!),
+                  _formatDuration(_post.mediaDuration!),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -265,7 +346,7 @@ class PostCard extends StatelessWidget {
           SizedBox(width: responsive.sp(4)),
           Expanded(
             child: Text(
-              post.location!,
+              _post.location!,
               style: TextStyle(
                 fontSize: responsive.sp(12),
                 color: AppTheme.textSecondary,
@@ -285,10 +366,10 @@ class PostCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          if (post.likes > 0)
+          if (_post.likes > 0)
             Flexible(
               child: Text(
-                '${post.likes} ${post.likes == 1 ? 'like' : 'likes'}',
+                '${_post.likes} ${_post.likes == 1 ? 'like' : 'likes'}',
                 style: TextStyle(
                   fontSize: responsive.sp(12),
                   color: AppTheme.textSecondary,
@@ -297,10 +378,10 @@ class PostCard extends StatelessWidget {
               ),
             ),
           const Spacer(),
-          if (post.comments > 0)
+          if (_post.comments > 0)
             Flexible(
               child: Text(
-                '${post.comments} ${post.comments == 1 ? 'comment' : 'comments'}',
+                '${_post.comments} ${_post.comments == 1 ? 'comment' : 'comments'}',
                 style: TextStyle(
                   fontSize: responsive.sp(12),
                   color: AppTheme.textSecondary,
@@ -308,7 +389,7 @@ class PostCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          if (post.comments > 0 && post.shares > 0)
+          if (_post.comments > 0 && _post.shares > 0)
             Text(
               ' • ',
               style: TextStyle(
@@ -316,10 +397,10 @@ class PostCard extends StatelessWidget {
                 color: AppTheme.textSecondary,
               ),
             ),
-          if (post.shares > 0)
+          if (_post.shares > 0)
             Flexible(
               child: Text(
-                '${post.shares} ${post.shares == 1 ? 'share' : 'shares'}',
+                '${_post.shares} ${_post.shares == 1 ? 'share' : 'shares'}',
                 style: TextStyle(
                   fontSize: responsive.sp(12),
                   color: AppTheme.textSecondary,
@@ -340,10 +421,10 @@ class PostCard extends StatelessWidget {
         children: [
           Flexible(
             child: _ActionButton(
-              icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
+              icon: _post.isLiked ? Icons.favorite : Icons.favorite_border,
               label: 'Like',
-              color: post.isLiked ? AppTheme.alertOrange : AppTheme.textSecondary,
-              onPressed: onLike,
+              color: _post.isLiked ? AppTheme.alertOrange : AppTheme.textSecondary,
+              onPressed: _handleLike,
               responsive: responsive,
             ),
           ),
@@ -351,7 +432,7 @@ class PostCard extends StatelessWidget {
             child: _ActionButton(
               icon: Icons.comment_outlined,
               label: 'Comment',
-              onPressed: onComment,
+              onPressed: _handleComment,
               responsive: responsive,
             ),
           ),
@@ -359,15 +440,15 @@ class PostCard extends StatelessWidget {
             child: _ActionButton(
               icon: Icons.share_outlined,
               label: 'Share',
-              onPressed: onShare,
+              onPressed: _handleShare,
               responsive: responsive,
             ),
           ),
           Flexible(
             child: _ActionButton(
               icon: Icons.translate,
-              label: 'Translate',
-              onPressed: onTranslate,
+              label: _isTranslated ? 'Original' : 'Translate',
+              onPressed: _handleTranslate,
               responsive: responsive,
             ),
           ),
