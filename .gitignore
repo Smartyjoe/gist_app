@@ -1,0 +1,188 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+.fvm/
+coverage/
+lib/generated_plugin_registrant.dart
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+pubspec.lock
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android related
+*.jks
+*.keystore
+/android/app/debug
+/android/app/profile
+/android/app/release
+/android/.gradle/
+/android/gradle/
+/android/gradlew
+/android/gradlew.bat
+/android/local.properties
+/android/key.properties
+/android/.gradle
+/android/captures/
+/android/app/google-services.json
+
+# iOS/XCode related
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/*sync/
+**/ios/**/.sconsign.dblite
+**/ios/**/.tags*
+**/ios/**/.vagrant/
+**/ios/**/DerivedData/
+**/ios/**/Icon?
+**/ios/**/Pods/
+**/ios/**/.symlinks/
+**/ios/**/profile
+**/ios/**/xcuserdata
+**/ios/.generated/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/App.framework
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/ios/Podfile.lock
+**/ios/GoogleService-Info.plist
+
+# Web related
+/web/firebase-config.js
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.env
+secrets.json
+firebase_options.dart
+google-services.json
+GoogleService-Info.plist
+
+# API Keys (IMPORTANT - Uncomment if storing keys in separate files)
+# WARNING: Your API keys are currently in AndroidManifest.xml, Info.plist, and AppDelegate.swift
+# Consider moving them to environment variables and uncommenting these:
+# android/app/src/main/AndroidManifest.xml
+# ios/Runner/Info.plist
+# ios/Runner/AppDelegate.swift
+# lib/config/api_keys.dart
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary/Cache files
+*.tmp
+*.temp
+tmp_*/
+tmp_rovodev_*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+# macOS
+*.swp
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Firebase
+**/firebase_app_id_file.json
+**/.firebaserc
+**/firebase.json
+**/.firebase/
+
+# Fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
+**/fastlane/readme.md
+
+# Testing
+test/.test_coverage.dart
+coverage/
+test_driver/
+
+# FVM (Flutter Version Management)
+.fvm/flutter_sdk
+
+# Generated Files
+*.g.dart
+*.freezed.dart
+*.config.dart
+*.gr.dart
+**/generated/
+
+# Build outputs
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
