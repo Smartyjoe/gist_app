@@ -9,6 +9,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../utils/responsive.dart';
 import '../../models/media_attachment.dart';
+import '../../models/post_background.dart';
 import '../../widgets/create_post/borderless_text_field.dart';
 import '../../widgets/create_post/control_chip.dart';
 import '../../widgets/create_post/action_sheet.dart';
@@ -35,7 +36,7 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
   String _selectedPriority = 'Normal';
   String _selectedLanguage = 'English';
   String? _selectedLocation;
-  Color? _backgroundColor;
+  PostBackground? _activeBackground;
   double _sheetHeight = 420;
 
   // Options
@@ -135,13 +136,29 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
     );
   }
 
+  /// Clears the active background and optionally shows an info snackbar.
+  void _clearBackgroundForMedia() {
+    if (_activeBackground != null) {
+      setState(() => _activeBackground = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Backgrounds are available for text posts only.'),
+          backgroundColor: AppTheme.textSecondary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   Future<void> _pickImages() async {
     try {
       final List<XFile> images = await _imagePicker.pickMultiImage();
+      if (images.isEmpty) return;
+      _clearBackgroundForMedia();
       for (var image in images) {
         final file = File(image.path);
         final fileSize = await file.length();
-        
         setState(() {
           _attachments.add(MediaAttachment(
             id: _uuid.v4(),
@@ -150,7 +167,7 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
             fileName: image.name,
             fileSize: fileSize,
           ));
-          _sheetHeight = 250; // Collapse sheet
+          _sheetHeight = 250;
         });
       }
       _updateContentState();
@@ -163,9 +180,9 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
     try {
       final XFile? photo = await _imagePicker.pickImage(source: ImageSource.camera);
       if (photo != null) {
+        _clearBackgroundForMedia();
         final file = File(photo.path);
         final fileSize = await file.length();
-        
         setState(() {
           _attachments.add(MediaAttachment(
             id: _uuid.v4(),
@@ -187,9 +204,9 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
     try {
       final XFile? video = await _imagePicker.pickVideo(source: ImageSource.camera);
       if (video != null) {
+        _clearBackgroundForMedia();
         final file = File(video.path);
         final fileSize = await file.length();
-        
         setState(() {
           _attachments.add(MediaAttachment(
             id: _uuid.v4(),
@@ -213,8 +230,8 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
         type: FileType.audio,
         allowMultiple: true,
       );
-
       if (result != null) {
+        _clearBackgroundForMedia();
         for (var file in result.files) {
           if (file.path != null) {
             setState(() {
@@ -251,6 +268,20 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
       SnackBar(
         content: Text(message),
         backgroundColor: AppTheme.alertOrange,
+      ),
+    );
+  }
+
+  void _showBackgroundPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _BackgroundPickerSheet(
+        currentBackground: _activeBackground,
+        onBackgroundSelected: (bg) {
+          setState(() => _activeBackground = bg);
+        },
       ),
     );
   }
@@ -415,7 +446,7 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
     final responsive = context.responsive;
 
     return Scaffold(
-      backgroundColor: _backgroundColor ?? AppTheme.white,
+      backgroundColor: AppTheme.white,
       
       // ============================================================
       // SECTION 1: TOP NAVIGATION BAR
@@ -442,15 +473,39 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
                   color: AppTheme.greySoft.withOpacity(0.5),
                 ),
                 
-                // Borderless Text Input
-                BorderlessTextField(
-                  controller: _textController,
-                  focusNode: _textFocusNode,
-                  hintText: "What's happening around you?",
-                  minLines: 5,
-                  maxLines: null,
-                  backgroundColor: _backgroundColor,
-                  onChanged: (text) => _updateContentState(),
+                // Borderless Text Input — animated switch between normal/styled
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: child,
+                  ),
+                  child: BorderlessTextField(
+                    key: ValueKey(_activeBackground?.id ?? 'normal'),
+                    controller: _textController,
+                    focusNode: _textFocusNode,
+                    hintText: "What's happening around you?",
+                    minLines: 5,
+                    maxLines: null,
+                    activeBackground: _activeBackground,
+                    onChanged: (text) {
+                      _updateContentState();
+                      // Auto-remove background if char limit exceeded
+                      if (text.length > BorderlessTextField.maxStyledChars &&
+                          _activeBackground != null) {
+                        setState(() => _activeBackground = null);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Background removed — text is too long for styled posts.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      }
+                    },
+                  ),
                 ),
                 
                 // Media Preview Area
@@ -700,16 +755,20 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
       ),
       ActionSheetItem(
         icon: Icons.palette,
-        label: 'Background colour',
+        label: _activeBackground != null
+            ? 'Change Background'
+            : 'Background colour',
         color: Colors.teal,
-        onTap: () {
-          // TODO: Color picker
-          setState(() {
-            _backgroundColor = _backgroundColor == null 
-              ? Colors.blue[50]
-              : null;
-          });
-        },
+        enabled: _attachments.isEmpty,
+        onTap: _attachments.isEmpty
+            ? _showBackgroundPicker
+            : () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content:
+                        Text('Backgrounds are available for text posts only.'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                ),
       ),
     ];
 
@@ -717,6 +776,266 @@ class _CreatePostScreenV2State extends State<CreatePostScreenV2> {
       items: actionItems,
       height: _sheetHeight,
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Background Picker Bottom Sheet
+// ---------------------------------------------------------------------------
+
+class _BackgroundPickerSheet extends StatelessWidget {
+  final PostBackground? currentBackground;
+  final ValueChanged<PostBackground?> onBackgroundSelected;
+
+  const _BackgroundPickerSheet({
+    required this.currentBackground,
+    required this.onBackgroundSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final responsive = context.responsive;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(responsive.sp(20)),
+          topRight: Radius.circular(responsive.sp(20)),
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Drag handle ───────────────────────────────────────────
+            SizedBox(height: responsive.sp(12)),
+            Container(
+              width: responsive.sp(40),
+              height: responsive.sp(4),
+              decoration: BoxDecoration(
+                color: AppTheme.greyMedium.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            SizedBox(height: responsive.sp(16)),
+
+            // ── Header row ────────────────────────────────────────────
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: responsive.sp(16)),
+              child: Row(
+                children: [
+                  Text(
+                    'Choose a background',
+                    style: TextStyle(
+                      fontSize: responsive.sp(16),
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: EdgeInsets.all(responsive.sp(6)),
+                      decoration: BoxDecoration(
+                        color: AppTheme.greySoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: responsive.sp(18),
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: responsive.sp(16)),
+
+            // ── Horizontal gallery ────────────────────────────────────
+            SizedBox(
+              height: responsive.sp(96),
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: responsive.sp(12)),
+                children: [
+                  // "No Background" tile — always first
+                  _BgTile(
+                    label: 'None',
+                    isSelected: currentBackground == null,
+                    onTap: () {
+                      onBackgroundSelected(null);
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.white,
+                        border: Border.all(color: AppTheme.greySoft, width: 1.5),
+                        borderRadius: BorderRadius.circular(responsive.sp(12)),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.format_color_reset,
+                          size: responsive.sp(28),
+                          color: AppTheme.greyMedium,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Library tiles
+                  ...PostBackground.library.map((bg) {
+                    final isSelected = currentBackground?.id == bg.id;
+                    return _BgTile(
+                      label: bg.label,
+                      isSelected: isSelected,
+                      onTap: () {
+                        onBackgroundSelected(bg);
+                        Navigator.pop(context);
+                      },
+                      child: _BackgroundPreview(background: bg),
+                    );
+                  }),
+                ],
+              ),
+            ),
+
+            SizedBox(height: responsive.sp(20)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Single tile in the picker gallery.
+class _BgTile extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Widget child;
+
+  const _BgTile({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final responsive = context.responsive;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: responsive.sp(5)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: responsive.sp(72),
+              height: responsive.sp(72),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(responsive.sp(12)),
+                border: isSelected
+                    ? Border.all(
+                        color: AppTheme.greenPrimary,
+                        width: 3,
+                      )
+                    : Border.all(
+                        color: Colors.transparent,
+                        width: 3,
+                      ),
+              ),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(responsive.sp(9)),
+                    child: child,
+                  ),
+                  if (isSelected)
+                    Positioned(
+                      bottom: responsive.sp(4),
+                      right: responsive.sp(4),
+                      child: Container(
+                        width: responsive.sp(20),
+                        height: responsive.sp(20),
+                        decoration: const BoxDecoration(
+                          color: AppTheme.greenPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.check,
+                          size: responsive.sp(13),
+                          color: AppTheme.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(height: responsive.sp(4)),
+            SizedBox(
+              width: responsive.sp(72),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: responsive.sp(10),
+                  color: isSelected
+                      ? AppTheme.greenPrimary
+                      : AppTheme.greyMedium,
+                  fontWeight:
+                      isSelected ? FontWeight.w600 : FontWeight.w400,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Renders the background design inside the tile preview.
+class _BackgroundPreview extends StatelessWidget {
+  final PostBackground background;
+
+  const _BackgroundPreview({required this.background});
+
+  @override
+  Widget build(BuildContext context) {
+    if (background.type == PostBackgroundType.pattern) {
+      return Container(
+        decoration: background.decoration,
+        child: CustomPaint(
+          painter: _resolvePainter(background),
+          child: const SizedBox.expand(),
+        ),
+      );
+    }
+    return Container(decoration: background.decoration);
+  }
+
+  CustomPainter _resolvePainter(PostBackground bg) {
+    final dotColor = bg.patternDotColor ?? Colors.white.withOpacity(0.4);
+    switch (bg.pattern) {
+      case PostBackgroundPattern.dots:
+        return DotPatternPainter(dotColor: dotColor, spacing: 12, radius: 1.8);
+      case PostBackgroundPattern.waves:
+        return WavePatternPainter(waveColor: dotColor);
+      case PostBackgroundPattern.shapes:
+        return ShapePatternPainter(shapeColor: dotColor);
+      default:
+        return DotPatternPainter(dotColor: dotColor);
+    }
   }
 }
 
