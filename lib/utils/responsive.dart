@@ -52,12 +52,20 @@ class Responsive {
     return 16.0;
   }
 
-  // Responsive spacing
+  // Responsive spacing with clamping to prevent overflow
   double sp(double size) {
-    if (isSmallMobile) return size * 0.9;
-    if (isMobile) return size;
-    if (isTablet) return size * 1.1;
-    return size * 1.2;
+    double scaledSize;
+    if (isSmallMobile) {
+      scaledSize = size * 0.85;
+    } else if (isMobile) {
+      scaledSize = size;
+    } else if (isTablet) {
+      scaledSize = size * 1.1;
+    } else {
+      scaledSize = size * 1.2;
+    }
+    // Clamp to prevent extreme sizes
+    return scaledSize.clamp(size * 0.7, size * 1.5);
   }
 
   // Responsive width percentage
@@ -74,6 +82,26 @@ class Responsive {
 
   // App bar height
   double get appBarHeight => kToolbarHeight + safeAreaInsets.top;
+  
+  // Text scale factor with overflow prevention
+  double get textScaleFactor {
+    final mediaQuery = MediaQuery.of(context);
+    // Clamp text scale factor to prevent overflow
+    return mediaQuery.textScaleFactor.clamp(0.8, 1.3);
+  }
+  
+  // Responsive spacing helper with overflow prevention
+  double spacing(double baseSize) {
+    if (isSmallMobile) return baseSize * 0.8;
+    if (isMobile) return baseSize;
+    if (isTablet) return baseSize * 1.2;
+    return baseSize * 1.4;
+  }
+  
+  // Get responsive font size with constraints
+  double fontSize(double baseSize) {
+    return sp(baseSize).clamp(10.0, 30.0);
+  }
 }
 
 // Extension for easy access

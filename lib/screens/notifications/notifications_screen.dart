@@ -181,6 +181,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
@@ -192,17 +193,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     ? AppTheme.alertOrange
                                     : AppTheme.textPrimary,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (!notification.isRead)
+                          if (!notification.isRead) ...[
+                            SizedBox(width: responsive.sp(8)),
                             Container(
                               width: responsive.sp(8),
                               height: responsive.sp(8),
+                              margin: EdgeInsets.only(top: responsive.sp(4)),
                               decoration: const BoxDecoration(
                                 color: AppTheme.greenPrimary,
                                 shape: BoxShape.circle,
                               ),
                             ),
+                          ],
                         ],
                       ),
                       SizedBox(height: responsive.sp(4)),

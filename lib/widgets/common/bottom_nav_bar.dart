@@ -30,8 +30,7 @@ class BottomNavBar extends StatelessWidget {
         ],
       ),
       child: SafeArea(
-        child: Container(
-          height: responsive.sp(60),
+        child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: responsive.horizontalPadding,
             vertical: responsive.sp(AppTheme.spacing8),
@@ -110,6 +109,7 @@ class _NavItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Stack(
@@ -136,15 +136,18 @@ class _NavItem extends StatelessWidget {
               ],
             ),
             SizedBox(height: responsive.sp(2)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: responsive.sp(10),
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                color: isActive ? AppTheme.greenPrimary : AppTheme.greyMedium,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: responsive.sp(10),
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive ? AppTheme.greenPrimary : AppTheme.greyMedium,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

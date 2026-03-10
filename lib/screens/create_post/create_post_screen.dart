@@ -227,6 +227,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               child: Container(
                 padding: EdgeInsets.symmetric(
                   vertical: responsive.sp(12),
+                  horizontal: responsive.sp(4),
                 ),
                 decoration: BoxDecoration(
                   color: isSelected ? AppTheme.greenPrimary : AppTheme.white,
@@ -236,6 +237,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   ),
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       _getPostTypeIcon(type),
@@ -250,6 +252,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                         fontSize: responsive.sp(13),
                         fontWeight: FontWeight.w500,
                       ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
                     ),
                   ],
                 ),
@@ -264,10 +269,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Widget _buildPrioritySelector(Responsive responsive) {
     return Wrap(
       spacing: responsive.sp(8),
+      runSpacing: responsive.sp(8),
       children: _priorities.map((priority) {
         final isSelected = _selectedPriority == priority;
         return ChoiceChip(
-          label: Text(priority),
+          label: Text(
+            priority,
+            style: TextStyle(
+              fontSize: responsive.sp(13),
+            ),
+          ),
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
@@ -282,6 +293,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           labelStyle: TextStyle(
             color: isSelected ? AppTheme.white : AppTheme.textPrimary,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            fontSize: responsive.sp(13),
+          ),
+          padding: EdgeInsets.symmetric(
+            horizontal: responsive.sp(12),
+            vertical: responsive.sp(8),
           ),
         );
       }).toList(),

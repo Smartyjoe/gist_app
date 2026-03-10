@@ -78,6 +78,7 @@ class PostCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   post.userName,
@@ -85,6 +86,8 @@ class PostCard extends StatelessWidget {
                         fontSize: responsive.sp(16),
                         fontWeight: FontWeight.w600,
                       ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
                 Text(
                   post.formattedDate,
@@ -92,6 +95,8 @@ class PostCard extends StatelessWidget {
                         fontSize: responsive.sp(12),
                         color: AppTheme.textSecondary,
                       ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ],
             ),
@@ -102,6 +107,8 @@ class PostCard extends StatelessWidget {
               // Show options menu
             },
             iconSize: responsive.sp(24),
+            padding: EdgeInsets.all(responsive.sp(8)),
+            constraints: const BoxConstraints(),
           ),
         ],
       ),
@@ -279,20 +286,26 @@ class PostCard extends StatelessWidget {
       child: Row(
         children: [
           if (post.likes > 0)
-            Text(
-              '${post.likes} ${post.likes == 1 ? 'like' : 'likes'}',
-              style: TextStyle(
-                fontSize: responsive.sp(12),
-                color: AppTheme.textSecondary,
+            Flexible(
+              child: Text(
+                '${post.likes} ${post.likes == 1 ? 'like' : 'likes'}',
+                style: TextStyle(
+                  fontSize: responsive.sp(12),
+                  color: AppTheme.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           const Spacer(),
           if (post.comments > 0)
-            Text(
-              '${post.comments} ${post.comments == 1 ? 'comment' : 'comments'}',
-              style: TextStyle(
-                fontSize: responsive.sp(12),
-                color: AppTheme.textSecondary,
+            Flexible(
+              child: Text(
+                '${post.comments} ${post.comments == 1 ? 'comment' : 'comments'}',
+                style: TextStyle(
+                  fontSize: responsive.sp(12),
+                  color: AppTheme.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           if (post.comments > 0 && post.shares > 0)
@@ -304,11 +317,14 @@ class PostCard extends StatelessWidget {
               ),
             ),
           if (post.shares > 0)
-            Text(
-              '${post.shares} ${post.shares == 1 ? 'share' : 'shares'}',
-              style: TextStyle(
-                fontSize: responsive.sp(12),
-                color: AppTheme.textSecondary,
+            Flexible(
+              child: Text(
+                '${post.shares} ${post.shares == 1 ? 'share' : 'shares'}',
+                style: TextStyle(
+                  fontSize: responsive.sp(12),
+                  color: AppTheme.textSecondary,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
         ],
@@ -322,30 +338,38 @@ class PostCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _ActionButton(
-            icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-            label: 'Like',
-            color: post.isLiked ? AppTheme.alertOrange : AppTheme.textSecondary,
-            onPressed: onLike,
-            responsive: responsive,
+          Flexible(
+            child: _ActionButton(
+              icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
+              label: 'Like',
+              color: post.isLiked ? AppTheme.alertOrange : AppTheme.textSecondary,
+              onPressed: onLike,
+              responsive: responsive,
+            ),
           ),
-          _ActionButton(
-            icon: Icons.comment_outlined,
-            label: 'Comment',
-            onPressed: onComment,
-            responsive: responsive,
+          Flexible(
+            child: _ActionButton(
+              icon: Icons.comment_outlined,
+              label: 'Comment',
+              onPressed: onComment,
+              responsive: responsive,
+            ),
           ),
-          _ActionButton(
-            icon: Icons.share_outlined,
-            label: 'Share',
-            onPressed: onShare,
-            responsive: responsive,
+          Flexible(
+            child: _ActionButton(
+              icon: Icons.share_outlined,
+              label: 'Share',
+              onPressed: onShare,
+              responsive: responsive,
+            ),
           ),
-          _ActionButton(
-            icon: Icons.translate,
-            label: 'Translate',
-            onPressed: onTranslate,
-            responsive: responsive,
+          Flexible(
+            child: _ActionButton(
+              icon: Icons.translate,
+              label: 'Translate',
+              onPressed: onTranslate,
+              responsive: responsive,
+            ),
           ),
         ],
       ),
@@ -382,11 +406,12 @@ class _ActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: responsive.sp(AppTheme.spacing12),
+          horizontal: responsive.sp(8),
           vertical: responsive.sp(AppTheme.spacing8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
@@ -394,12 +419,16 @@ class _ActionButton extends StatelessWidget {
               color: color ?? AppTheme.textSecondary,
             ),
             SizedBox(width: responsive.sp(4)),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: responsive.sp(13),
-                color: color ?? AppTheme.textSecondary,
-                fontWeight: FontWeight.w500,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: responsive.sp(13),
+                  color: color ?? AppTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
           ],
