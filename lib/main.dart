@@ -4,7 +4,7 @@ import 'config/app_theme.dart';
 import 'config/app_constants.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/explore/explore_screen.dart';
-import 'screens/create_post/create_post_screen.dart';
+import 'screens/create_post/create_post_screen_v2.dart';
 import 'screens/notifications/notifications_screen.dart';
 import 'screens/profile/profile_screen.dart';
 import 'widgets/common/bottom_nav_bar.dart';
@@ -56,7 +56,7 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _screens = const [
     HomeScreen(),
     ExploreScreen(),
-    CreatePostScreen(),
+    CreatePostScreenV2(),
     NotificationsScreen(),
     ProfileScreen(),
   ];

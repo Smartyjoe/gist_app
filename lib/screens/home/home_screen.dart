@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/post.dart';
-import '../../widgets/common/custom_app_bar.dart';
+import '../../widgets/common/gistly_app_bar.dart';
 import '../../widgets/story/status_stories.dart';
 import '../../widgets/post/post_card.dart';
 import '../../config/app_theme.dart';
@@ -114,28 +114,23 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final responsive = context.responsive;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: CustomAppBar(
-        title: 'Community Reporter',
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search, size: responsive.sp(24)),
-            onPressed: () {
-              // Navigate to search
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.filter_list, size: responsive.sp(24)),
-            onPressed: () {
-              _showFilterSheet(context);
-            },
-          ),
-        ],
+      appBar: GistlyAppBar(
+        onLogoTap: _scrollToTop,
+        unreadMessages: 3, // TODO: Get from state management
       ),
       body: RefreshIndicator(
         onRefresh: _handleRefresh,

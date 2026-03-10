@@ -5,7 +5,7 @@ import '../../config/app_theme.dart';
 import '../../utils/responsive.dart';
 import '../../screens/post/post_detail_screen.dart';
 import 'share_bottom_sheet.dart';
-import 'translation_overlay.dart';
+import 'translation_overlay.dart' show TranslationBottomSheet;
 
 class PostCard extends StatefulWidget {
   final Post post;
@@ -75,14 +75,13 @@ class _PostCardState extends State<PostCard> {
   }
 
   void _showTranslationOverlay() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => TranslationOverlay(
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => TranslationBottomSheet(
         originalText: _post.content,
         translatedText: _translatedText!,
-        onClose: () {
-          Navigator.pop(context);
-        },
       ),
     );
   }

@@ -7,7 +7,7 @@ import '../../models/comment.dart';
 import '../../widgets/comment/comment_item.dart';
 import '../../widgets/comment/comment_input.dart';
 import '../../widgets/post/share_bottom_sheet.dart';
-import '../../widgets/post/translation_overlay.dart';
+import '../../widgets/post/translation_overlay.dart' show TranslationBottomSheet;
 
 class PostDetailScreen extends StatefulWidget {
   final Post post;
@@ -72,14 +72,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   void _showTranslationOverlay() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => TranslationOverlay(
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => TranslationBottomSheet(
         originalText: _post.content,
         translatedText: _translatedText!,
-        onClose: () {
-          Navigator.pop(context);
-        },
       ),
     );
   }
