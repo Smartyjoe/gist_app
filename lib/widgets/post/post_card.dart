@@ -6,6 +6,8 @@ import '../../utils/responsive.dart';
 import '../../screens/post/post_detail_screen.dart';
 import 'share_bottom_sheet.dart';
 import 'translation_overlay.dart' show TranslationBottomSheet;
+import 'voice_reply_sheet.dart';
+import 'hot_takes_section.dart';
 
 // ── Colour helpers ────────────────────────────────────────────────────────────
 
@@ -117,6 +119,23 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
     );
   }
 
+  void _handleVoiceReply() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => VoiceReplySheet(
+        postId: _post.id,
+        onSend: (reply) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Voice reply sent!'),
+            behavior: SnackBarBehavior.floating,
+          ));
+        },
+      ),
+    );
+  }
+
   void _showOptionsMenu() {
     final responsive = context.responsive;
     showModalBottomSheet(
@@ -200,40 +219,30 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
           bottom: const BorderSide(color: AppTheme.greySoft, width: 1),
         ),
       ),
-      child: InkWell(
-        onTap: _openPostDetail,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Priority banner
-            if (_post.isHighPriority) _buildPriorityBanner(responsive, priorityColor),
-
-            // Header
-            _buildHeader(responsive),
-
-            // Content
-            _buildContent(responsive),
-
-            // Media
-            if (_post.mediaUrl != null || _post.thumbnailUrl != null)
-              _buildMedia(responsive),
-
-            // Location
-            if (_post.location != null) _buildLocation(responsive),
-
-            // Tags
-            if (_post.tags.isNotEmpty) _buildTags(responsive),
-
-            // Engagement stats
-            _buildEngagementStats(responsive),
-
-            // Divider
-            Divider(height: 1, thickness: 1, color: AppTheme.greySoft),
-
-            // Action bar
-            _buildActionBar(responsive),
-          ],
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: _openPostDetail,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_post.isHighPriority) _buildPriorityBanner(responsive, priorityColor),
+                _buildHeader(responsive),
+                _buildContent(responsive),
+                if (_post.mediaUrl != null || _post.thumbnailUrl != null)
+                  _buildMedia(responsive),
+                if (_post.location != null) _buildLocation(responsive),
+                if (_post.tags.isNotEmpty) _buildTags(responsive),
+                _buildEngagementStats(responsive),
+                Divider(height: 1, thickness: 1, color: AppTheme.greySoft),
+                _buildActionBar(responsive),
+              ],
+            ),
+          ),
+          // Hot Takes section
+          HotTakesSection(postId: _post.id),
+        ],
       ),
     );
   }
@@ -606,6 +615,12 @@ class _PostCardState extends State<PostCard> with SingleTickerProviderStateMixin
           _ActionBtn(
             icon: Icons.translate_rounded,
             onTap: _handleTranslate,
+            responsive: responsive,
+          ),
+          // Voice Reply
+          _ActionBtn(
+            icon: Icons.mic_none_rounded,
+            onTap: _handleVoiceReply,
             responsive: responsive,
           ),
           const Spacer(),

@@ -3,6 +3,7 @@ import '../../models/post.dart';
 import '../../widgets/common/gistly_app_bar.dart';
 import '../../widgets/story/status_stories.dart';
 import '../../widgets/post/post_card.dart';
+import '../../widgets/home/live_discovery_section.dart';
 import '../../config/app_theme.dart';
 import '../../utils/responsive.dart';
 
@@ -252,6 +253,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 height: responsive.sp(92),
               ),
+            ),
+
+            // ── Live Discovery (contextual) ──────────────────────────────────
+            SliverToBoxAdapter(
+              child: LiveDiscoverySection(),
             ),
 
             // ── Posts or empty state ─────────────────────────────────────────

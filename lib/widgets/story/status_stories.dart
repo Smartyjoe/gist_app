@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/post.dart';
+import '../../models/story_model.dart';
 import '../../config/app_theme.dart';
 import '../../utils/responsive.dart';
+import '../../screens/story/story_type_picker.dart';
+import '../../screens/story/story_viewer.dart';
 
 class StatusStories extends StatelessWidget {
   final List<Post> stories;
@@ -52,7 +55,7 @@ class _AddStoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => StoryTypePicker.show(context),
       child: Container(
         width: responsive.sp(68),
         margin: EdgeInsets.only(right: responsive.sp(10)),
@@ -149,10 +152,12 @@ class _StoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Opening ${story.userName}\'s story...'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 1),
+        final mockStories = StoryModel.getMockStories();
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => StoryViewer(
+            stories: mockStories,
+            initialIndex: 0,
+          ),
         ));
       },
       child: Container(

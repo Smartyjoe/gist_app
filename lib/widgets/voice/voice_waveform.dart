@@ -162,8 +162,6 @@ class VoicePlayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final responsive = Responsive(context);
-
     return Card(
       margin: EdgeInsets.symmetric(
         horizontal: AppTheme.spacing16,
